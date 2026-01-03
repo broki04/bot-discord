@@ -2,6 +2,7 @@ import { Collection } from 'discord.js';
 import { Command } from '../interfaces/Command';
 import path from 'path';
 import fs from 'fs';
+import { __dirname } from '../utils/path';
 
 const commands = new Collection<string, Command>();
 

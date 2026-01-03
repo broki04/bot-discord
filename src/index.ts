@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Client, Events, GatewayIntentBits } from 'discord.js';
 import path from 'path';
 import fs from 'fs';
+import { __dirname } from './utils/path';
 
 const client = new Client({
   intents: [
@@ -18,7 +19,7 @@ const eventFiles = fs
 
 for (const file of eventFiles) {
   const filePath = path.join(eventsPath, file);
-  const event = require(filePath).event;
+  const event = await import(filePath);
 
   if (event.once) {
     client.once(event.name, (...args) => event.execute(...args));
