@@ -1,0 +1,1 @@
+import"dotenv/config";import{Client as s,Events as o,GatewayIntentBits as e}from"discord.js";var t=new s({intents:[e.Guilds,e.GuildMembers,e.MessageContent]});t.once(o.ClientReady,n=>{console.log(`\u{1F680} Bot ${n.user.tag} is ready.`)});t.login(process.env.DISCORD_TOKEN);
