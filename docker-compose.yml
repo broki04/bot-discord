@@ -1,6 +1,6 @@
 services:
   bot:
-    image: ghcr.io/brokikrul/bot-discord:latest
+    image: ghcr.io/broki04/bot-discord:latest
     container_name: bot-discord
     restart: unless-stopped
     env_file:
