@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { Client, Events, GatewayIntentBits } from 'discord.js';
+import path from 'path';
+import fs from 'fs';
 
 const client = new Client({
   intents: [
@@ -9,8 +11,20 @@ const client = new Client({
   ],
 });
 
-client.once(Events.ClientReady, (clientReady) => {
-  console.log(`🚀 Bot ${clientReady.user.tag} is ready.`);
-});
+const eventsPath = path.join(__dirname, 'events');
+const eventFiles = fs
+  .readdirSync(eventsPath)
+  .filter((f) => f.endsWith('.ts') || f.endsWith('.js'));
+
+for (const file of eventFiles) {
+  const filePath = path.join(eventsPath, file);
+  const event = require(filePath).event;
+
+  if (event.once) {
+    client.once(event.name, (...args) => event.execute(...args));
+  } else {
+    client.on(event.name, (...args) => event.execute(...args));
+  }
+}
 
 client.login(process.env.DISCORD_TOKEN);
