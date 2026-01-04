@@ -6,9 +6,8 @@ import {
   RESTPostAPIApplicationCommandsJSONBody,
   Routes,
 } from 'discord.js';
-import client from '../client';
 
-const HASH_FILE = path.join(process.cwd(), 'command-hashes.json');
+const HASH_FILE = path.join(process.cwd(), 'data', 'command-hashes.json');
 
 interface CommandInfo {
   name: string;

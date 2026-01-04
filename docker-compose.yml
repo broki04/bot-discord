@@ -3,10 +3,10 @@ services:
     image: ghcr.io/broki04/bot-discord:latest
     container_name: bot-discord
     restart: unless-stopped
+    volumes:
+      - ./data:/app/data
     env_file:
       - .env
-    environment:
-      - NODE_ENV=production
 
   watchtower:
     image: containrrr/watchtower:latest
