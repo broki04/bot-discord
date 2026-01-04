@@ -11,7 +11,7 @@ import {
 export async function deployCommands() {
   const commands: RESTPostAPIApplicationCommandsJSONBody[] = [];
 
-  const isDev = process.env.NODE_ENV !== 'production';
+  const isDev = process.env.NODE_ENV === 'development';
   const ext = isDev ? 'ts' : 'js';
   const foldersPath = path.join(
     process.cwd(),

@@ -7,7 +7,7 @@ import { pathToFileURL } from 'url';
 export const commands = new Collection<string, Command>();
 
 export async function loadCommands() {
-  const isDev = process.env.NODE_ENV !== 'production';
+  const isDev = process.env.NODE_ENV === 'development';
   const ext = isDev ? 'ts' : 'js';
 
   const foldersPath = path.join(
