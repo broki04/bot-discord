@@ -1,2 +1,22 @@
-import'dotenv/config';import {Collection,Client,GatewayIntentBits,Events,REST,Routes}from'discord.js';import C from'path';import f from'fs';import {pathToFileURL}from'url';var D=new Collection;async function w(){let t=process.env.NODE_ENV==="development",m=t?"ts":"js",e=C.join(process.cwd(),t?"src":"dist","commands");if(!f.existsSync(e)){console.error("[ERROR]: Commands folder not found: ",e);return}let c=f.readdirSync(e);for(let i of c){let a=C.join(e,i),d=f.lstatSync(a),s;if(d.isDirectory()){let o=C.join(a,`${i}.${m}`);f.existsSync(o)&&(s=await import(pathToFileURL(o).href));}else i.endsWith(`.${m}`)&&(s=await import(pathToFileURL(a).href));if(s&&"command"in s){let o=s.command;D.set(o.data.name,o),console.log("komenda za\u0142adowana ",o.data.name);}}console.log(`\u2705 Loaded ${D.size} commands.`);}async function O(){let t=[],m=process.env.NODE_ENV==="development",e=m?"ts":"js",c=C.join(process.cwd(),m?"src":"dist","commands"),i=f.readdirSync(c);for(let n of i){let y=C.join(c,n),v=f.lstatSync(y),l;if(v.isDirectory()){let p=C.join(y,`${n}.${e}`);f.existsSync(p)&&(l=await import(pathToFileURL(p).href));}else n.endsWith(`.${e}`)&&(l=await import(pathToFileURL(y).href));if(l?.command){let p=l.command;t.push(p.data.toJSON());}}let a=new REST().setToken(process.env.DISCORD_TOKEN),d=process.env.DISCORD_CLIENT_ID,s=process.env.BETA_GUILDS?.split(",").map(n=>n.trim()).filter(Boolean)||[],o=process.env.DEPLOY_MODE||"both";try{if(console.log(`\u{1F680} Automatic deployment of ${t.length} started...`),o==="guild"||o==="both")for(let n of s)await a.put(Routes.applicationGuildCommands(d,n),{body:t}),console.log(`\u2705 Deployed commands to guild ${n}`);(o==="global"||o==="both")&&(await a.put(Routes.applicationCommands(d),{body:t}),console.log("\u2705 Deployed commands globally"));}catch(n){console.error("\u274C Error deploying commands:",n);}}var r=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers,GatewayIntentBits.MessageContent]});await w();await O();r.on(Events.InteractionCreate,async t=>{t.isChatInputCommand()&&console.log(t.commandName," wywo\u0142ana");});r.once(Events.ClientReady,()=>{console.log(`\u{1F680} Bot ${r.user?.tag} is ready.`),console.log(`\u{1F680} Present on ${r.guilds.cache.size} servers.`);});r.login(process.env.DISCORD_TOKEN);//# sourceMappingURL=index.js.map
-//# sourceMappingURL=index.js.map
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const client_1 = require("./client");
+const events_1 = require("./events");
+const commands_1 = require("./commands");
+const deploy_commands_1 = require("./commands/deploy-commands");
+async function initBot() {
+    try {
+        await (0, commands_1.registerCommands)();
+        await (0, events_1.registerEvents)();
+        if (process.env.NODE_ENV === 'development') {
+            await (0, deploy_commands_1.deployCommands)();
+        }
+        await client_1.client.login(process.env.DISCORD_TOKEN);
+    }
+    catch (err) {
+        console.error('💥 Error while startup: ', err);
+        process.exit(1);
+    }
+}
+initBot();

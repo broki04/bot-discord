@@ -1,15 +1,16 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/**/*.ts'],
+  entry: ['src/index.ts'],
   outDir: 'dist',
-  format: 'esm',
-  minify: true,
+  format: 'esm', // ESM
+  target: 'es2022',
+  platform: 'node',
   clean: true,
-  dts: true,
   sourcemap: true,
+  minify: false,
+  bundle: false, // kluczowe – zachowuje strukturę
   splitting: false,
-  treeshake: true,
-  // @ts-expect-error
-  preserveStructure: true,
+  treeshake: false,
+  outExtension: () => ({ js: '.mjs' }), // pliki wyjściowe jako .mjs
 });

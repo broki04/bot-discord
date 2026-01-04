@@ -1,29 +1,23 @@
 import 'dotenv/config';
-import { Client, Events, GatewayIntentBits } from 'discord.js';
-import { loadCommands } from './handlers/commandHandler';
-import { deployCommands } from './handlers/deployHandler';
-import { handleInteractionCreate } from './events/interactionCreate';
+import { client } from './client';
+import { registerEvents } from './events';
+import { registerCommands } from './commands';
+import { deployCommands } from './commands/deploy-commands';
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.MessageContent,
-  ],
-});
+async function initBot() {
+  try {
+    await registerCommands();
+    await registerEvents();
 
-await loadCommands();
-await deployCommands();
+    if (process.env.NODE_ENV === 'development') {
+      await deployCommands();
+    }
 
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+    await client.login(process.env.DISCORD_TOKEN);
+  } catch (err) {
+    console.error('💥 Error while startup: ', err);
+    process.exit(1);
+  }
+}
 
-  console.log(interaction.commandName, ' wywołana');
-});
-
-client.once(Events.ClientReady, () => {
-  console.log(`🚀 Bot ${client.user?.tag} is ready.`);
-  console.log(`🚀 Present on ${client.guilds.cache.size} servers.`);
-});
-
-client.login(process.env.DISCORD_TOKEN);
+initBot();
