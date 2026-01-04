@@ -18,8 +18,6 @@ export const command = {
     ) as SlashCommandBuilder,
 
   async execute(interaction: ChatInputCommandInteraction) {
-    console.log('executed ???');
-
     const member = interaction.options.getUser('member') || interaction.user;
 
     const embed = new EmbedBuilder()

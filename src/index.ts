@@ -9,9 +9,7 @@ async function initBot() {
     await registerCommands();
     await registerEvents();
 
-    if (process.env.NODE_ENV === 'development') {
-      await deployCommands();
-    }
+    await deployCommands();
 
     await client.login(process.env.DISCORD_TOKEN);
   } catch (err) {

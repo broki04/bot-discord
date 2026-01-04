@@ -5,48 +5,50 @@ import client from '../client';
 
 export async function registerCommands() {
   const isDev = process.env.NODE_ENV === 'development';
-  const ext = isDev ? 'ts' : 'js';
+  const ext = isDev ? '.ts' : '.js';
   const foldersPath = path.join(
     process.cwd(),
     isDev ? 'src' : 'dist',
     'commands',
   );
 
-  const items = fs.readdirSync(foldersPath);
-  for (const item of items) {
-    if (
-      [
-        'index.ts',
-        'index.js',
-        'deploy-commands.ts',
-        'deploy-commands.ts',
-      ].includes(item)
-    )
-      continue;
+  async function load(dir: string) {
+    const items = fs.readdirSync(dir);
 
-    const fullPath = path.join(foldersPath, item);
-    const stat = fs.lstatSync(fullPath);
+    for (const item of items) {
+      if (
+        [
+          'index.ts',
+          'index.js',
+          'deploy-commands.ts',
+          'deploy-commands.js',
+        ].includes(item)
+      )
+        continue;
 
-    let modulePath: string | null = null;
-    if (stat.isDirectory()) {
-      const file = path.join(fullPath, `${item}.${ext}`);
-      if (fs.existsSync(file)) modulePath = file;
-    } else if (item.endsWith(`.${ext}`)) {
-      modulePath = fullPath;
-    }
+      const fullPath = path.join(dir, item);
+      const stat = fs.lstatSync(fullPath);
 
-    if (modulePath) {
+      if (stat.isDirectory()) {
+        await load(fullPath);
+        continue;
+      }
+
+      if (!item.endsWith(ext)) continue;
+
       try {
-        const imported = await import(modulePath);
-        if ('command' in imported) {
-          const cmd: Command = imported.commandl;
-          client.commands.set(cmd.data.name, cmd);
-        }
+        const imported = await import(fullPath);
+        const command: Command | undefined =
+          imported.command ?? imported.default;
+
+        if (!command?.data || !command?.execute) continue;
+        client.commands.set(command.data.name, command);
       } catch (err) {
-        console.error(`💥 Error loading command at ${modulePath}: `, err);
+        console.error(`💥 Error loading command at ${fullPath}:`, err);
       }
     }
   }
 
+  await load(foldersPath);
   console.log(`📦 Total commands registered: ${client.commands.size}`);
 }
