@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { Client, Events, GatewayIntentBits } from 'discord.js';
-import path from 'path';
-import fs from 'fs';
-import { __dirname } from './utils/path';
+import { loadCommands } from './handlers/commandHandler';
+import { deployCommands } from './handlers/deployHandler';
+import { handleInteractionCreate } from './events/interactionCreate';
 
 const client = new Client({
   intents: [
@@ -12,20 +12,18 @@ const client = new Client({
   ],
 });
 
-const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs
-  .readdirSync(eventsPath)
-  .filter((f) => f.endsWith('.ts') || f.endsWith('.js'));
+await loadCommands();
+await deployCommands();
 
-for (const file of eventFiles) {
-  const filePath = path.join(eventsPath, file);
-  const event = await import(filePath);
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-  if (event.once) {
-    client.once(event.name, (...args) => event.execute(...args));
-  } else {
-    client.on(event.name, (...args) => event.execute(...args));
-  }
-}
+  console.log(interaction.commandName, ' wywołana');
+});
+
+client.once(Events.ClientReady, () => {
+  console.log(`🚀 Bot ${client.user?.tag} is ready.`);
+  console.log(`🚀 Present on ${client.guilds.cache.size} servers.`);
+});
 
 client.login(process.env.DISCORD_TOKEN);

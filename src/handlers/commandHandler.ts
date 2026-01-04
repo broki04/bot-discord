@@ -2,32 +2,45 @@ import { Collection } from 'discord.js';
 import { Command } from '../interfaces/Command';
 import path from 'path';
 import fs from 'fs';
-import { __dirname } from '../utils/path';
+import { pathToFileURL } from 'url';
 
-const commands = new Collection<string, Command>();
+export const commands = new Collection<string, Command>();
 
 export async function loadCommands() {
-  const commandsPath = path.join(__dirname, '../commands');
-  const commandFiles = fs
-    .readdirSync(commandsPath)
-    .filter((f) => f.endsWith('.ts') || f.endsWith('.js'));
+  const isDev = process.env.NODE_ENV !== 'production';
+  const ext = isDev ? 'ts' : 'js';
 
-  for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const stat = fs.lstatSync(filePath);
+  const foldersPath = path.join(
+    process.cwd(),
+    isDev ? 'src' : 'dist',
+    'commands',
+  );
 
+  if (!fs.existsSync(foldersPath)) {
+    console.error('[ERROR]: Commands folder not found: ', foldersPath);
+    return;
+  }
+
+  const commandFolders = fs.readdirSync(foldersPath);
+  for (const fileOrFolder of commandFolders) {
+    const fullPath = path.join(foldersPath, fileOrFolder);
+    const stat = fs.lstatSync(fullPath);
+
+    let commandModule;
     if (stat.isDirectory()) {
-      const subFiles = fs
-        .readdirSync(filePath)
-        .filter((f) => f.endsWith('.ts') || f.endsWith('.js'));
-      for (const sub of subFiles) {
-        const subPath = path.join(filePath, sub);
-        const cmd: { command: Command } = require(subPath);
-        commands.set(cmd.command.data.name, cmd.command);
+      const _index = path.join(fullPath, `${fileOrFolder}.${ext}`);
+      if (fs.existsSync(_index)) {
+        commandModule = await import(pathToFileURL(_index).href);
       }
-    } else {
-      const cmd: { command: Command } = require(filePath);
-      commands.set(cmd.command.data.name, cmd.command);
+    } else if (fileOrFolder.endsWith(`.${ext}`)) {
+      commandModule = await import(pathToFileURL(fullPath).href);
+    }
+
+    if (commandModule && 'command' in commandModule) {
+      const command: Command = commandModule.command;
+      commands.set(command.data.name, command);
+
+      console.log('komenda załadowana ', command.data.name);
     }
   }
 
