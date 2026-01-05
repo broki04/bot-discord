@@ -6,6 +6,7 @@ import {
 } from 'discord.js';
 
 import { client } from '../../client';
+import { logger } from '../../utils/logger';
 
 export const name = Events.InteractionCreate;
 export const once = false;
@@ -15,19 +16,15 @@ export default {
   async execute(interaction: Interaction) {
     if (!interaction.isChatInputCommand()) return;
 
-    const isDebug = process.env.DEBUG_MODE === 'true';
+    logger.debug(
+      `executed /${interaction.commandName} (cmdId: ${interaction.commandId} | typeId: ${interaction.type})`,
+    );
 
-    if (isDebug) {
-      console.log(`[CMD DEBUG] Nazwa komendy: ${interaction.commandName}`);
-      console.log(`[CMD DEBUG] Typ interakcji: ${interaction.type}`);
-      console.log(`[CMD DEBUG] ID komendy: ${interaction.commandId}`);
-      console.log(
-        `[CMD DEBUG] Klucze client.commands: ${[...client.commands.keys()]}`,
-      );
-      console.log(`[CMD DEBUG] Pełna mapa client.commands: `);
+    if (process.env.DEBUG_MODE === 'true') {
+      logger.debug(`map of client.commands:`);
 
       client.commands.forEach((cmd, name) => {
-        console.log(`   -> ${name}: `, {
+        logger.debug(`   -> ${name}: `, {
           hasData: !!cmd.data,
           nameInData: cmd.data?.name,
           hasExecute: typeof cmd.execute === 'function',
@@ -43,16 +40,14 @@ export default {
         flags: MessageFlags.Ephemeral,
       });
 
-      if (isDebug) {
-        console.log(`[CMD DEBUG] Komenda jest undefined.`);
-      }
+      logger.debug(`Command is undefined`);
       return;
     }
 
     try {
       await command.execute(interaction);
     } catch (err) {
-      console.error('❌ Błąd wykonania: ', err);
+      logger.error('Error while executing ', err);
     }
   },
 };

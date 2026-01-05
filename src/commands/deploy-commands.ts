@@ -1,11 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import chalk from 'chalk';
+
 import {
   REST,
   RESTPostAPIApplicationCommandsJSONBody,
   Routes,
 } from 'discord.js';
+import { logger } from '../utils/logger';
 
 const HASH_FILE = path.join(process.cwd(), 'data', 'command-hashes.json');
 
@@ -39,7 +42,8 @@ function loadHashes(): CommandHashes {
 
 function saveHashes(hashes: CommandHashes) {
   fs.writeFileSync(HASH_FILE, JSON.stringify(hashes, null, 2), 'utf-8');
-  console.log('💾 Commands hashes saved to command-hashes.json');
+
+  logger.success('Commands hashes saved');
 }
 
 async function collectCommands(
@@ -80,18 +84,22 @@ async function collectCommands(
       const source = fs.readFileSync(fullPath, 'utf-8');
       const hash = crypto.createHash('md5').update(source).digest('hex');
 
+      logger.debug(`Collected command: /${data.name}`);
+
       result.push({
         name: data.name,
         data,
         hash,
       });
     } catch (err) {
-      console.error(`🏃‍♂️‍➡️ Skipping ${fullPath}: `, err);
+      logger.error(`Skipped ${fullPath}:`, err);
     }
   }
 }
 
 export async function deployCommands() {
+  logger.debug(`Function deployCommands() called`);
+
   const isDev = process.env.NODE_ENV === 'development';
   const ext = isDev ? 'ts' : 'js';
 
@@ -100,7 +108,7 @@ export async function deployCommands() {
   await collectCommands(basePath, ext, commands);
 
   if (commands.length === 0) {
-    console.log('⚠️ No commands found to deploy.');
+    logger.success('No commands found to deploy');
     return;
   }
 
@@ -144,11 +152,11 @@ export async function deployCommands() {
 
       if (cmd) {
         await rest.delete(Routes.applicationCommand(clientId, cmd.id));
-        console.log(`🗑️ Removed global command: ${name}`);
+        logger.debug(`Removed /${name} globally`);
       }
       delete saved.global[name];
     } catch (err) {
-      console.error(`❌ Error while removing global command ${name}: `, err);
+      logger.error(`Error removing /${name}: `, err);
     }
   }
 
@@ -165,12 +173,13 @@ export async function deployCommands() {
           await rest.delete(
             Routes.applicationGuildCommand(clientId, guildId, cmd.id),
           );
-          console.log(`🗑️ Removed command: ${name} from guild: ${guildId}`);
+
+          logger.debug(`Removed /${name} from ${guildId}`);
         }
         delete saved.guilds[guildId][name];
       }
     } catch (err) {
-      console.error(`❌ Error while removing guild command ${name}: `, err);
+      logger.error(`Error removing guild command from ${guildId}: `, err);
     }
   }
 
@@ -188,26 +197,43 @@ export async function deployCommands() {
   );
 
   if (changedCommands.length === 0) {
-    console.log('✅ No command changes detected – deploy skipped.');
+    logger.success('No command changes detected - deploy skipped');
     saveHashes(saved);
     return;
   }
 
+  logger.debug(
+    'Deploying changes:',
+    changedCommands.map((c) => c.name).join(', '),
+  );
+
   // * deploy
+
+  logger.debug(
+    'Started deployment',
+    mode === 'guild'
+      ? 'for guilds'
+      : mode === 'both'
+      ? 'for guilds and globally'
+      : 'globally',
+  );
+
   if ((mode === 'guild' || mode === 'both') && betaGuilds.length > 0) {
     for (const guildId of betaGuilds) {
       await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
         body: body,
       });
       saved.guilds[guildId] = { ...currentHashes };
-      console.log(`✅ Deployed commands to guild ${guildId}`);
+
+      logger.success(`Deployed commands to guild ${guildId}`);
     }
   }
 
   if (mode === 'global' || mode === 'both') {
     await rest.put(Routes.applicationCommands(clientId), { body: body });
     saved.global = { ...currentHashes };
-    console.log(`✅ Deployed commands globally`);
+
+    logger.success('Deployed commands globally');
   }
 
   saveHashes(saved);

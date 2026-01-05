@@ -2,8 +2,11 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { Command } from '../interfaces/Command';
 import client from '../client';
+import { logger } from '../utils/logger';
 
 export async function registerCommands() {
+  logger.debug('Function registerCommands() called');
+
   const isDev = process.env.NODE_ENV === 'development';
   const ext = isDev ? '.ts' : '.js';
   const foldersPath = path.join(
@@ -43,12 +46,13 @@ export async function registerCommands() {
 
         if (!command?.data || !command?.execute) continue;
         client.commands.set(command.data.name, command);
+        logger.debug(`Command /${command.data.name} added`);
       } catch (err) {
-        console.error(`💥 Error loading command at ${fullPath}:`, err);
+        logger.error(`Error loading command at ${fullPath}:`, err);
       }
     }
   }
 
   await load(foldersPath);
-  console.log(`📦 Total commands registered: ${client.commands.size}`);
+  logger.info('Total commands registered:', client.commands.size);
 }

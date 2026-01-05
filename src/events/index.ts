@@ -1,7 +1,9 @@
 import { ClientEvents } from 'discord.js';
-import fs from 'node:fs';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import client from '../client';
+import { logger } from '../utils/logger';
+import { loadDirectory } from '../utils/loadDirectory';
 
 interface Event<K extends keyof ClientEvents = keyof ClientEvents> {
   name: K;
@@ -9,31 +11,31 @@ interface Event<K extends keyof ClientEvents = keyof ClientEvents> {
   execute: (...args: ClientEvents[K]) => void | Promise<void>;
 }
 
+const loadedEvents = new Set<string>();
+const ignoredFiles = new Set(['index.ts', 'index.js']);
+
 export async function registerEvents() {
+  logger.debug('Function registerEvents() called');
+
   const isDev = process.env.NODE_ENV === 'development';
-  const ext = isDev ? 'ts' : 'js';
-  const eventsPath = path.join(process.cwd(), isDev ? 'src' : 'dist', 'events');
+  const ext = isDev ? '.ts' : '.js';
 
-  let loadedCount = 0;
-  async function load(dir: string) {
-    const items = fs.readdirSync(dir);
+  const baseDir = path.join(process.cwd(), isDev ? 'src' : 'dist', 'events');
 
-    for (const item of items) {
-      const fullPath = path.join(dir, item);
-      const stat = fs.lstatSync(fullPath);
+  let loaded = 0;
+  await loadDirectory(
+    baseDir,
+    { ext, ignore: new Set(['index.ts', 'index.js']) },
 
-      if (stat.isDirectory()) {
-        await load(fullPath);
-        continue;
-      }
-
-      if (!item.endsWith(`.${ext}`)) continue;
-
+    async (filePath) => {
       try {
-        const imported = await import(fullPath);
+        const imported = await import(filePath);
         const event: Event | undefined = imported.default ?? imported.event;
 
-        if (!event?.name || typeof event.execute !== 'function') continue;
+        if (!event?.name || typeof event.execute !== 'function') {
+          logger.warn('Invalid event structure in', filePath);
+          return;
+        }
 
         if (event.once) {
           client.once(event.name, (...args) => event.execute(...args));
@@ -41,13 +43,15 @@ export async function registerEvents() {
           client.on(event.name, (...args) => event.execute(...args));
         }
 
-        loadedCount++;
-      } catch (err) {
-        console.error(`❌ Error loading event ${fullPath}: `, err);
-      }
-    }
-  }
+        logger.info(`Registered ${event.name} (once: ${Boolean(event.once)})`);
 
-  await load(eventsPath);
-  console.log(`✅ Loaded ${loadedCount} events in total`);
+        loadedEvents.add(filePath);
+        loaded++;
+      } catch (err) {
+        logger.error('Failed to import event:', filePath, err);
+      }
+    },
+  );
+
+  logger.info(`Events loaded: ${loaded}`);
 }

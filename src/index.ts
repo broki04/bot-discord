@@ -3,6 +3,7 @@ import { client } from './client';
 import { registerEvents } from './events';
 import { registerCommands } from './commands';
 import { deployCommands } from './commands/deploy-commands';
+import { logger } from './utils/logger';
 
 async function initBot() {
   try {
@@ -13,7 +14,7 @@ async function initBot() {
 
     await client.login(process.env.DISCORD_TOKEN);
   } catch (err) {
-    console.error('💥 Error while startup: ', err);
+    logger.error('Error while startup: ', err);
     process.exit(1);
   }
 }
