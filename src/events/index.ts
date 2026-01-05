@@ -1,19 +1,13 @@
-import { ClientEvents } from 'discord.js';
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import client from '../client';
 import { logger } from '../utils/logger';
 import { loadDirectory } from '../utils/loadDirectory';
+import { isValidEvent, resetEventValidator } from '../utils/validators';
+import { Event } from '../interfaces/Event';
 
-interface Event<K extends keyof ClientEvents = keyof ClientEvents> {
-  name: K;
-  once?: boolean;
-  execute: (...args: ClientEvents[K]) => void | Promise<void>;
-}
+resetEventValidator();
 
 const loadedEvents = new Set<string>();
-const ignoredFiles = new Set(['index.ts', 'index.js']);
-
 export async function registerEvents() {
   logger.debug('Function registerEvents() called');
 
@@ -32,8 +26,8 @@ export async function registerEvents() {
         const imported = await import(filePath);
         const event: Event | undefined = imported.default ?? imported.event;
 
-        if (!event?.name || typeof event.execute !== 'function') {
-          logger.warn('Invalid event structure in', filePath);
+        if (!isValidEvent(event)) {
+          logger.warn('Invalid or duplicate event:', filePath);
           return;
         }
 
