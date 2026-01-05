@@ -16,21 +16,21 @@ export default {
   async execute(interaction: Interaction) {
     if (!interaction.isChatInputCommand()) return;
 
+    console.log('aaacb');
+
     logger.debug(
       `executed /${interaction.commandName} (cmdId: ${interaction.commandId} | typeId: ${interaction.type})`,
     );
 
-    if (process.env.DEBUG_MODE === 'true') {
-      logger.debug(`map of client.commands:`);
+    logger.debug(`map of client.commands:`);
 
-      client.commands.forEach((cmd, name) => {
-        logger.debug(`   -> ${name}: `, {
-          hasData: !!cmd.data,
-          nameInData: cmd.data?.name,
-          hasExecute: typeof cmd.execute === 'function',
-        });
+    client.commands.forEach((cmd, name) => {
+      logger.debug(`   -> ${name}: `, {
+        hasData: !!cmd.data,
+        nameInData: cmd.data?.name,
+        hasExecute: typeof cmd.execute === 'function',
       });
-    }
+    });
 
     const command = client.commands.get(interaction.commandName);
     if (!command) {

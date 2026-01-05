@@ -23,6 +23,7 @@ export async function registerEvents() {
 
     async (filePath) => {
       try {
+        delete require.cache[require.resolve(filePath)];
         const imported = await import(filePath);
         const event: Event | undefined = imported.default ?? imported.event;
 

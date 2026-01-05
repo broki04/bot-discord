@@ -27,6 +27,7 @@ export async function registerCommands() {
     { ext, ignore: ignoreFiles },
     async (filePath) => {
       try {
+        delete require.cache[require.resolve(filePath)];
         const imported = await import(filePath);
         const command: Command | undefined =
           imported.command ?? imported.default;

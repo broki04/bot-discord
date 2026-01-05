@@ -1,7 +1,5 @@
 import chalk from 'chalk';
 
-const DEBUG_MODE = process.env.DEBUG_MODE === 'true';
-
 function getCallerFile(): string {
   const err = new Error();
   const stack = err.stack?.split('\n') || [];
@@ -39,10 +37,8 @@ export const logger = {
   error: (...args: any[]) =>
     console.log(`❌ ${chalk.red(`[${getCallerFile()}]`)}`, ...args),
 
-  debug: (...args: any[]) => {
-    if (!DEBUG_MODE) return;
-    console.log(`🐛 ${chalk.gray(`[${getCallerFile()}]`)}`, ...args);
-  },
+  debug: (...args: any[]) =>
+    console.log(`🐛 ${chalk.gray(`[${getCallerFile()}]`)}`, ...args),
 
   color: (color: string, msg: string) => {
     if ((chalk as any)[color]) return (chalk as any)[color](msg);
