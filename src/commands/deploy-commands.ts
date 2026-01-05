@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import chalk from 'chalk';
 
 import {
   REST,
@@ -9,6 +8,8 @@ import {
   Routes,
 } from 'discord.js';
 import { logger } from '../utils/logger';
+import { isValidCommand, resetCommandValidator } from '../utils/validators';
+import { loadDirectory } from '../utils/loadDirectory';
 
 const HASH_FILE = path.join(process.cwd(), 'data', 'command-hashes.json');
 
@@ -46,66 +47,49 @@ function saveHashes(hashes: CommandHashes) {
   logger.success('Commands hashes saved');
 }
 
-async function collectCommands(
-  dir: string,
-  ext: string,
-  result: CommandInfo[],
-) {
-  const items = fs.readdirSync(dir);
-
-  for (const item of items) {
-    if (
-      [
-        'index.ts',
-        'index.js',
-        'deploy-commands.ts',
-        'deploy-commands.js',
-      ].includes(item)
-    )
-      continue;
-
-    const fullPath = path.join(dir, item);
-    const stat = fs.lstatSync(fullPath);
-
-    if (stat.isDirectory()) {
-      await collectCommands(fullPath, ext, result);
-      continue;
-    }
-
-    if (!item.endsWith(`.${ext}`)) continue;
-
-    try {
-      const imported = await import(fullPath);
-      const command = imported.command ?? imported.default;
-
-      if (!command?.data) continue;
-
-      const data = command.data.toJSON();
-      const source = fs.readFileSync(fullPath, 'utf-8');
-      const hash = crypto.createHash('md5').update(source).digest('hex');
-
-      logger.debug(`Collected command: /${data.name}`);
-
-      result.push({
-        name: data.name,
-        data,
-        hash,
-      });
-    } catch (err) {
-      logger.error(`Skipped ${fullPath}:`, err);
-    }
-  }
-}
-
 export async function deployCommands() {
   logger.debug(`Function deployCommands() called`);
 
   const isDev = process.env.NODE_ENV === 'development';
   const ext = isDev ? 'ts' : 'js';
+  const baseDir = path.join(process.cwd(), isDev ? 'src' : 'dist', 'commands');
 
-  const basePath = path.join(process.cwd(), isDev ? 'src' : 'dist', 'commands');
   const commands: CommandInfo[] = [];
-  await collectCommands(basePath, ext, commands);
+  resetCommandValidator();
+
+  await loadDirectory(
+    baseDir,
+    {
+      ext,
+      ignore: new Set([
+        'index.ts',
+        'index.js',
+        'deploy-commands.ts',
+        'deploy-commands.js',
+      ]),
+    },
+    async (filePath) => {
+      const imported = await import(filePath);
+      const command = imported.command ?? imported.default;
+
+      if (!isValidCommand(command)) {
+        logger.warn('Invalid or duplicate command:', filePath, command);
+        return;
+      }
+
+      const data = command.data.toJSON();
+      const source = fs.readFileSync(filePath, 'utf-8');
+      const hash = crypto.createHash('md5').update(source).digest('hex');
+
+      commands.push({
+        name: data.name,
+        data,
+        hash,
+      });
+
+      logger.debug(`Collected command: /${data.name}`);
+    },
+  );
 
   if (commands.length === 0) {
     logger.success('No commands found to deploy');
@@ -203,8 +187,7 @@ export async function deployCommands() {
   }
 
   logger.debug(
-    'Deploying changes:',
-    changedCommands.map((c) => c.name).join(', '),
+    `Deploying changes: /${changedCommands.map((c) => c.name).join(', ')}`,
   );
 
   // * deploy

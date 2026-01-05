@@ -20,13 +20,17 @@ function getCallerFile(): string {
 }
 
 export const logger = {
-  info: (...args: any[]) => console.log(chalk.blue('[INFO]'), ...args),
-  warn: (...args: any[]) => console.log(chalk.yellow('[WARN]'), ...args),
-  success: (...args: any[]) => console.log(chalk.green('[OK]'), ...args),
-  error: (...args: any[]) => console.log(chalk.red('[ERROR]'), ...args),
+  info: (...args: any[]) =>
+    console.log(`🚀 ${chalk.blue(`[${getCallerFile()}]`)}`, ...args),
+  warn: (...args: any[]) =>
+    console.log(`⚠️ ${chalk.yellow(`[${getCallerFile()}]`)}`, ...args),
+  success: (...args: any[]) =>
+    console.log(`✅ ${chalk.green(`[${getCallerFile()}]`)}`, ...args),
+  error: (...args: any[]) =>
+    console.log(`❌ ${chalk.red(`[${getCallerFile()}]`)}`, ...args),
 
   debug: (...args: any[]) => {
     if (!DEBUG_MODE) return;
-    console.log(chalk.magenta(`[${getCallerFile()}]`), ...args);
+    console.log(`🐛 ${chalk.gray(`[${getCallerFile()}]`)}`, ...args);
   },
 };
